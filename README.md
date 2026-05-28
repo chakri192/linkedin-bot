@@ -81,3 +81,4 @@ python3 auth.py
 ```zsh
 crontab -l | grep -v "linkedin-bot" | crontab -
 ```
+
