@@ -23,3 +23,4 @@ echo ""
 echo "Verify with: crontab -l"
 echo "Live logs:   tail -f $LOG_DIR/cron.log"
 
+ 
