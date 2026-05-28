@@ -66,19 +66,41 @@ linkedin-bot/
 
 ---
 
-## Image handling
+## Error handling
 
-The bot attempts to scrape the article's OG image through multiple layers of fallbacks:
-
+### Image scraping
 | Failure | Handling |
 |---|---|
 | Site returns 403 | Retries with 3 different User-Agents |
 | Relative image URL | Fixed automatically |
-| SVG or WebP format | Rejected — moves to fallback |
-| Image over 4MB | Rejected — moves to fallback |
+| SVG or WebP format | Rejected — generates fallback card |
+| Image over 4MB | Rejected — generates fallback card |
 | Image too small (placeholder) | Rejected via dimension check |
-| Upload timeout | Retries 3x with exponential backoff |
-| All scrape attempts fail | Generates a local text card image using Pillow |
+| All scrape attempts fail | Generates local text card via Pillow |
+
+### LLM (Ollama)
+| Failure | Handling |
+|---|---|
+| Ollama not running | Exits with clear message: run `ollama serve` |
+| Timeout | Retries 3x with backoff |
+| Empty response | Retries 3x |
+
+### LinkedIn API
+| Failure | Handling |
+|---|---|
+| 401 Unauthorized | Exits with message to re-run `python3 auth.py` |
+| 422 Asset not ready | Waits 5s and retries up to 3x |
+| 429 Rate limited | Waits `retry-after` header duration |
+| 5xx Server error | Retries 3x with backoff |
+
+### Data integrity
+| Failure | Handling |
+|---|---|
+| `.tokens.json` corrupted | Exits with message to re-run `python3 auth.py` |
+| `.posted_urls.json` corrupted | Resets file automatically and continues |
+| RSS feed malformed or down | Skips feed, continues with others |
+| Article missing title or URL | Skipped silently |
+| Missing `.env` variable | Exits with clear message naming the missing key |
 
 ---
 
