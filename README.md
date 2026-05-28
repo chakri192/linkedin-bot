@@ -130,3 +130,31 @@ cat logs/$(date +%Y-%m-%d).log # today's log
 ```zsh
 crontab -l | grep -v "linkedin-bot" | crontab -
 ```
+
+---
+
+## Scheduling — launchd (recommended over cron)
+
+cron does not fire when the Mac lid is closed. Use launchd instead — it fires missed jobs as soon as the Mac wakes up.
+
+### Install launchd agents
+```zsh
+chmod +x setup_launchd.sh && ./setup_launchd.sh
+```
+
+### Verify
+```zsh
+launchctl list | grep linkedinbot
+```
+
+### Logs
+```zsh
+tail -f logs/launchd.log
+```
+
+### Remove launchd agents
+```zsh
+launchctl unload ~/Library/LaunchAgents/com.linkedinbot.morning.plist
+launchctl unload ~/Library/LaunchAgents/com.linkedinbot.afternoon.plist
+launchctl unload ~/Library/LaunchAgents/com.linkedinbot.tokencheck.plist
+```
