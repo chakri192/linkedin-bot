@@ -67,15 +67,15 @@ linkedin-bot/
 ---
 
 ## Token expiry
-LinkedIn access tokens last ~60 days. `check_token.py` runs daily at 8 AM and sends macOS notifications:
+LinkedIn access tokens last ~60 days. `check_token.py` runs daily at 8 AM and sends a macOS notification:
 
-| Days remaining | Notification |
-|---|---|
-| 7 days | ⚠️ Warning — run `python3 auth.py` now |
-| 1 day | 🔴 Urgent — run today |
-| Expired | 🔴 Critical — posts are failing |
+| Days remaining | Severity | Action |
+|---|---|---|
+| 7 days | [WARNING] | Run `python3 auth.py` soon |
+| 1 day | [CRITICAL] | Run `python3 auth.py` today |
+| 0 days | [EXPIRED] | Posts are failing — run immediately |
 
-Run manually to check:
+Check manually at any time:
 ```zsh
 python3 check_token.py
 ```
