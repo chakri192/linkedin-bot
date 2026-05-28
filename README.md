@@ -3,9 +3,9 @@
 Automatically posts tech news to LinkedIn twice daily (8:00 AM + 1:00 PM IST) with real article images scraped from the source.
 
 ## Stack
-- **News**: Really Simple Syndication(RSS) feeds — Ars Technica, The Verge, TechCrunch, Wired, MIT Tech Review
+- **News**: RSS feeds — Ars Technica, The Verge, TechCrunch, Wired, MIT Tech Review
 - **Post copy**: Local LLM via Ollama (`llama3.1:8b`) — 2-paragraph format, no emojis
-- **Images**: Images scraped directly from article URLs 
+- **Images**: OG images scraped directly from article URLs (no AI generation)
 - **Scheduler**: macOS cron
 
 ## Prerequisites
@@ -53,8 +53,9 @@ crontab -l  # verify
 linkedin-bot/
 ├── auth.py              # One-time OAuth flow
 ├── post.py              # Main bot
+├── check_token.py       # Token expiry checker — runs daily via cron
 ├── requirements.txt
-├── cron_setup.sh        # Installs cron jobs (8 AM + 1 PM IST)
+├── cron_setup.sh        # Installs cron jobs (8 AM + 1 PM IST + daily token check)
 ├── .env.template        # Copy to .env and fill in credentials
 ├── .env                 # Your secrets — never commit
 ├── .tokens.json         # LinkedIn tokens — never commit (auto-created)
@@ -65,21 +66,29 @@ linkedin-bot/
 
 ---
 
+## Token expiry
+LinkedIn access tokens last ~60 days. `check_token.py` runs daily at 8 AM and sends macOS notifications:
+
+| Days remaining | Notification |
+|---|---|
+| 7 days | ⚠️ Warning — run `python3 auth.py` now |
+| 1 day | 🔴 Urgent — run today |
+| Expired | 🔴 Critical — posts are failing |
+
+Run manually to check:
+```zsh
+python3 check_token.py
+```
+
+---
+
 ## Monitoring
 ```zsh
 tail -f logs/cron.log          # live cron output
 cat logs/$(date +%Y-%m-%d).log # today's log
 ```
 
-## Token expiry
-LinkedIn access tokens last ~60 days. Re-run when posts start failing:
-```zsh
-python3 auth.py
-```
-
 ## Remove cron jobs
 ```zsh
 crontab -l | grep -v "linkedin-bot" | crontab -
 ```
-
- 

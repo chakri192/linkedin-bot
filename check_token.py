@@ -15,13 +15,13 @@ def notify(title, message):
     ])
 
 if remaining_days <= 0:
-    notify("LinkedIn Bot 🔴 EXPIRED", "Token expired! Run python3 auth.py NOW or posts will fail.")
+    notify("[EXPIRED] LinkedIn Bot", "Token expired. Run python3 auth.py immediately or posts will fail.")
     print("ERROR: Token has expired. Run python3 auth.py immediately.")
 elif remaining_days <= 1:
-    notify("LinkedIn Bot 🔴 EXPIRES TODAY", "Run python3 auth.py NOW before posts fail tonight.")
-    print(f"URGENT: Token expires in {remaining_days:.1f} days.")
+    notify("[CRITICAL] LinkedIn Bot", "Token expires today. Run python3 auth.py now before posts fail.")
+    print(f"CRITICAL: Token expires in {remaining_days:.1f} days.")
 elif remaining_days <= 7:
-    notify("LinkedIn Bot ⚠️ Token Expiring Soon", f"Token expires in {remaining_days:.0f} days. Run python3 auth.py now.")
+    notify("[WARNING] LinkedIn Bot", f"Token expires in {remaining_days:.0f} days. Run python3 auth.py soon.")
     print(f"WARNING: Token expires in {remaining_days:.0f} days. Run python3 auth.py now.")
 else:
-    print(f"Token OK — {remaining_days:.0f} days remaining")
+    print(f"OK: Token valid — {remaining_days:.0f} days remaining")
