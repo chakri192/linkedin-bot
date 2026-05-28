@@ -139,33 +139,141 @@ def fetch_best_article(posted_urls: set) -> dict:
 
 # ── OG image scraper ──────────────────────────────────────────────────────────
 
-def scrape_og_image(url: str) -> bytes:
+# ── Image fallback generator ─────────────────────────────────────────────────
+
+def make_fallback_image(title: str) -> tuple:
+    """Generate a clean text-card PNG when OG image scraping fails."""
     try:
-        headers = {"User-Agent": "Mozilla/5.0 (compatible; LinkedInBot/1.0)"}
-        r = requests.get(url, headers=headers, timeout=10)
-        soup = BeautifulSoup(r.text, "html.parser")
+        from PIL import Image, ImageDraw, ImageFont
+        import textwrap
 
-        img_url = None
-        # Try og:image first, then twitter:image
-        for attr in [("property", "og:image"), ("name", "twitter:image")]:
-            tag = soup.find("meta", {attr[0]: attr[1]})
-            if tag and tag.get("content"):
-                img_url = tag["content"]
-                break
+        W, H = 1200, 630
+        img = Image.new("RGB", (W, H), color=(15, 20, 40))
+        draw = ImageDraw.Draw(img)
 
-        if not img_url:
-            log.warning("No OG image found for article.")
-            return None
+        # Border
+        draw.rectangle([0, 0, W-1, H-1], outline=(60, 120, 200), width=4)
 
-        img_r = requests.get(img_url, headers=headers, timeout=10)
-        if img_r.ok and img_r.headers.get("content-type", "").startswith("image/"):
-            log.info(f"Got OG image: {img_url[:80]} ({len(img_r.content)//1024}KB)")
-            return img_r.content, img_r.headers.get("content-type", "image/jpeg")
+        # Source label
+        draw.rectangle([40, 40, 300, 80], fill=(60, 120, 200))
+        try:
+            font_label = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 24)
+            font_title = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 52)
+        except Exception:
+            font_label = ImageFont.load_default()
+            font_title = font_label
+
+        draw.text((50, 48), "TECH NEWS", fill=(255, 255, 255), font=font_label)
+
+        # Title wrapping
+        wrapped = textwrap.wrap(title, width=32)[:4]
+        y = 160
+        for line in wrapped:
+            draw.text((60, y), line, fill=(240, 240, 240), font=font_title)
+            y += 70
+
+        # Bottom bar
+        draw.rectangle([0, H-60, W, H], fill=(60, 120, 200))
+        draw.text((50, H-45), "linkedin-bot · automated tech news", fill=(255,255,255), font=font_label)
+
+        import io
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=90)
+        buf.seek(0)
+        log.info("Generated fallback image card.")
+        return buf.read(), "image/jpeg"
+    except ImportError:
+        log.warning("Pillow not installed — skipping fallback image. Run: pip3 install Pillow --break-system-packages")
         return None
-
     except Exception as e:
-        log.warning(f"OG image scrape failed: {e}")
+        log.warning(f"Fallback image generation failed: {e}")
         return None
+
+
+def scrape_og_image(url: str, title: str = "") -> tuple:
+    ALLOWED_TYPES = {"image/jpeg", "image/png", "image/gif"}
+    MAX_SIZE_BYTES = 4 * 1024 * 1024  # 4MB — safe under LinkedIn's 5MB limit
+    MIN_DIMENSION  = 400              # reject tiny placeholder images
+
+    USER_AGENTS = [
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/124 Safari/537.36",
+        "Mozilla/5.0 (compatible; LinkedInBot/1.0; +http://www.linkedin.com/)",
+        "Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/115.0",
+    ]
+
+    for ua in USER_AGENTS:
+        try:
+            headers = {"User-Agent": ua}
+            r = requests.get(url, headers=headers, timeout=10, allow_redirects=True)
+            if not r.ok:
+                continue
+
+            soup = BeautifulSoup(r.text, "html.parser")
+            img_url = None
+
+            for attr in [("property", "og:image"), ("name", "twitter:image"), ("property", "og:image:secure_url")]:
+                tag = soup.find("meta", {attr[0]: attr[1]})
+                if tag and tag.get("content"):
+                    img_url = tag["content"].strip()
+                    break
+
+            if not img_url:
+                log.warning(f"No OG image tag found with UA: {ua[:40]}")
+                continue
+
+            # Fix relative URLs
+            if img_url.startswith("//"):
+                img_url = "https:" + img_url
+            elif img_url.startswith("/"):
+                from urllib.parse import urlparse
+                base = urlparse(url)
+                img_url = f"{base.scheme}://{base.netloc}{img_url}"
+
+            # Download image with redirect following
+            img_r = requests.get(img_url, headers=headers, timeout=15, allow_redirects=True)
+            if not img_r.ok:
+                log.warning(f"Image download failed: {img_r.status_code} {img_url[:60]}")
+                continue
+
+            content_type = img_r.headers.get("content-type", "").split(";")[0].strip().lower()
+
+            # Reject unsupported formats (svg, webp, etc)
+            if content_type not in ALLOWED_TYPES:
+                log.warning(f"Unsupported image format: {content_type} — skipping")
+                continue
+
+            # Reject oversized images
+            if len(img_r.content) > MAX_SIZE_BYTES:
+                log.warning(f"Image too large: {len(img_r.content)//1024}KB — skipping")
+                continue
+
+            # Reject tiny placeholder images using PIL if available
+            try:
+                from PIL import Image
+                import io
+                im = Image.open(io.BytesIO(img_r.content))
+                w, h = im.size
+                if w < MIN_DIMENSION or h < MIN_DIMENSION:
+                    log.warning(f"Image too small ({w}x{h}) — likely a placeholder, skipping")
+                    continue
+                log.info(f"Image validated: {w}x{h} {content_type} {len(img_r.content)//1024}KB")
+            except ImportError:
+                pass  # Pillow not installed — skip dimension check
+            except Exception as e:
+                log.warning(f"Image validation error: {e}")
+                continue
+
+            log.info(f"Got OG image: {img_url[:80]}")
+            return img_r.content, content_type
+
+        except requests.exceptions.Timeout:
+            log.warning(f"Timeout scraping image with UA: {ua[:40]}")
+        except Exception as e:
+            log.warning(f"OG image scrape error: {e}")
+
+    # All user agents failed — generate fallback
+    log.warning("All scrape attempts failed — generating fallback image card.")
+    return make_fallback_image(title) or None
 
 # ── Gemini post generator ─────────────────────────────────────────────────────
 
@@ -237,19 +345,34 @@ def upload_image(access_token: str, author_urn: str, img_bytes: bytes, content_t
     upload_url = reg_data["value"]["uploadMechanism"]["com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"]["uploadUrl"]
     asset_urn  = reg_data["value"]["asset"]
 
-    # Step 2: PUT the image bytes
-    put = requests.put(
-        upload_url,
-        headers={"Authorization": f"Bearer {access_token}", "Content-Type": content_type},
-        data=img_bytes,
-        timeout=30,
-    )
-    if put.ok or put.status_code == 201:
-        log.info(f"Image uploaded: {asset_urn}")
-        return asset_urn
-    else:
-        log.warning(f"Image upload PUT failed: {put.status_code} {put.text[:200]}")
-        return None
+    # Step 2: PUT the image bytes — retry up to 3 times
+    for attempt in range(1, 4):
+        try:
+            put = requests.put(
+                upload_url,
+                headers={"Authorization": f"Bearer {access_token}", "Content-Type": content_type},
+                data=img_bytes,
+                timeout=30,
+            )
+            if put.ok or put.status_code == 201:
+                # Wait briefly for LinkedIn to process the asset
+                time.sleep(2)
+                log.info(f"Image uploaded: {asset_urn}")
+                return asset_urn
+            elif put.status_code >= 500:
+                log.warning(f"Upload attempt {attempt}/3 failed with {put.status_code} — retrying...")
+                time.sleep(3 * attempt)
+            else:
+                log.warning(f"Image upload PUT failed: {put.status_code} {put.text[:200]}")
+                return None
+        except requests.exceptions.Timeout:
+            log.warning(f"Upload attempt {attempt}/3 timed out — retrying...")
+            time.sleep(3 * attempt)
+        except Exception as e:
+            log.warning(f"Upload attempt {attempt}/3 error: {e}")
+            return None
+    log.warning("All upload attempts failed.")
+    return None
 
 
 def post_to_linkedin(access_token: str, author_urn: str, text: str, asset_urn = None) -> bool:
@@ -317,7 +440,7 @@ def main():
 
     # Try to get OG image
     asset_urn = None
-    og_result = scrape_og_image(article["url"])
+    og_result = scrape_og_image(article["url"], article["title"])
     if og_result:
         img_bytes, content_type = og_result
         asset_urn = upload_image(access_token, f"urn:li:person:{author_sub}", img_bytes, content_type)
@@ -337,5 +460,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
- 
