@@ -5,7 +5,7 @@ Automatically posts tech news to LinkedIn twice daily (8:00 AM + 1:00 PM IST) wi
 ## Stack
 - **News**: RSS feeds — Ars Technica, The Verge, TechCrunch, Wired, MIT Tech Review
 - **Post copy**: Local LLM via Ollama (`llama3.1:8b`) — 2-paragraph format, no emojis
-- **Images**: OG images scraped directly from article URLs (no AI generation)
+- **Images**: OG images scraped directly from article URLs with fallback text card generation
 - **Scheduler**: macOS cron
 
 ## Prerequisites
@@ -63,6 +63,22 @@ linkedin-bot/
 ├── .gitignore
 └── logs/                # Daily log files + cron.log
 ```
+
+---
+
+## Image handling
+
+The bot attempts to scrape the article's OG image through multiple layers of fallbacks:
+
+| Failure | Handling |
+|---|---|
+| Site returns 403 | Retries with 3 different User-Agents |
+| Relative image URL | Fixed automatically |
+| SVG or WebP format | Rejected — moves to fallback |
+| Image over 4MB | Rejected — moves to fallback |
+| Image too small (placeholder) | Rejected via dimension check |
+| Upload timeout | Retries 3x with exponential backoff |
+| All scrape attempts fail | Generates a local text card image using Pillow |
 
 ---
 
