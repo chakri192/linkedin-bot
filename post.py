@@ -3,7 +3,7 @@
 LinkedIn Tech News Bot
 - Fetches top story from RSS feeds
 - Scrapes real OG image from article
-- Generates 2-para post via Claude API
+- Generates 2-para post via local LLM (Ollama)
 - Posts to LinkedIn with image
 - Tracks posted URLs to avoid duplicates
 """
@@ -20,8 +20,15 @@ load_dotenv()
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
-CLIENT_ID     = os.environ["LINKEDIN_CLIENT_ID"]
-CLIENT_SECRET = os.environ["LINKEDIN_CLIENT_SECRET"]
+def _require_env(key: str) -> str:
+    val = os.environ.get(key)
+    if not val:
+        print(f"ERROR: Missing required env var: {key}. Check your .env file.")
+        sys.exit(1)
+    return val
+
+CLIENT_ID     = _require_env("LINKEDIN_CLIENT_ID")
+CLIENT_SECRET = _require_env("LINKEDIN_CLIENT_SECRET")
 TOKENS_FILE   = Path(".tokens.json")
 POSTED_FILE   = Path(".posted_urls.json")
 LOGS_DIR      = Path("logs")
@@ -56,9 +63,13 @@ log = logging.getLogger(__name__)
 
 def load_tokens() -> dict:
     if not TOKENS_FILE.exists():
-        log.error("No .tokens.json found. Run `python auth.py` first.")
+        log.error("No .tokens.json found. Run python3 auth.py first.")
         sys.exit(1)
-    return json.loads(TOKENS_FILE.read_text())
+    try:
+        return json.loads(TOKENS_FILE.read_text())
+    except (json.JSONDecodeError, ValueError):
+        log.error(".tokens.json is corrupted. Run python3 auth.py to re-authenticate.")
+        sys.exit(1)
 
 
 def refresh_access_token(tokens: dict) -> dict:
@@ -90,7 +101,11 @@ def refresh_access_token(tokens: dict) -> dict:
 
 def load_posted() -> set:
     if POSTED_FILE.exists():
-        return set(json.loads(POSTED_FILE.read_text()))
+        try:
+            return set(json.loads(POSTED_FILE.read_text()))
+        except (json.JSONDecodeError, ValueError):
+            log.warning(".posted_urls.json is corrupted — resetting.")
+            POSTED_FILE.write_text("[]")
     return set()
 
 
@@ -113,14 +128,18 @@ def fetch_best_article(posted_urls: set) -> dict:
     for feed_url in RSS_FEEDS:
         try:
             feed = feedparser.parse(feed_url)
+            if feed.bozo and not feed.entries:
+                log.warning(f"Feed malformed or unreachable: {feed_url}")
+                continue
             for entry in feed.entries[:10]:
-                url = entry.get("link", "")
-                if not url or url in posted_urls:
+                url = entry.get("link", "").strip()
+                title = entry.get("title", "").strip()
+                if not url or not title or url in posted_urls:
                     continue
                 candidates.append({
                     "url":     url,
-                    "title":   entry.get("title", ""),
-                    "summary": entry.get("summary", ""),
+                    "title":   title,
+                    "summary": BeautifulSoup(entry.get("summary", ""), "html.parser").get_text()[:800],
                     "source":  feed.feed.get("title", feed_url),
                     "score":   score_entry(entry),
                 })
@@ -302,16 +321,31 @@ Rules:
 - Max 280 words total
 """
 
-    resp = requests.post(
-        "http://localhost:11434/api/generate",
-        headers={"Content-Type": "application/json"},
-        json={"model": "llama3.1:8b", "prompt": prompt, "stream": False},
-        timeout=60,
-    )
-    resp.raise_for_status()
-    text = resp.json()["response"].strip()
-    log.info(f"Generated post ({len(text.split())} words)")
-    return text
+    for attempt in range(1, 4):
+        try:
+            resp = requests.post(
+                "http://localhost:11434/api/generate",
+                headers={"Content-Type": "application/json"},
+                json={"model": "llama3.1:8b", "prompt": prompt, "stream": False},
+                timeout=90,
+            )
+            resp.raise_for_status()
+            text = resp.json()["response"].strip()
+            if not text:
+                raise ValueError("Ollama returned empty response")
+            log.info(f"Generated post ({len(text.split())} words)")
+            return text
+        except requests.exceptions.ConnectionError:
+            log.error("Ollama is not running. Start it with: ollama serve")
+            sys.exit(1)
+        except requests.exceptions.Timeout:
+            log.warning(f"Ollama timeout on attempt {attempt}/3 — retrying...")
+            time.sleep(5 * attempt)
+        except Exception as e:
+            log.warning(f"Ollama attempt {attempt}/3 failed: {e}")
+            time.sleep(5 * attempt)
+    log.error("Ollama failed after 3 attempts.")
+    sys.exit(1)
 
 # ── LinkedIn API ──────────────────────────────────────────────────────────────
 
@@ -398,24 +432,47 @@ def post_to_linkedin(access_token: str, author_urn: str, text: str, asset_urn = 
         },
     }
 
-    resp = requests.post(
-        "https://api.linkedin.com/v2/ugcPosts",
-        headers={
-            "Authorization":  f"Bearer {access_token}",
-            "Content-Type":   "application/json",
-            "X-Restli-Protocol-Version": "2.0.0",
-        },
-        json=body,
-        timeout=15,
-    )
-
-    if resp.ok or resp.status_code == 201:
-        post_id = resp.headers.get("x-restli-id", "unknown")
-        log.info(f"✓ Posted successfully. Post ID: {post_id}")
-        return True
-    else:
-        log.error(f"Post failed: {resp.status_code} {resp.text}")
-        return False
+    for attempt in range(1, 4):
+        try:
+            resp = requests.post(
+                "https://api.linkedin.com/v2/ugcPosts",
+                headers={
+                    "Authorization":  f"Bearer {access_token}",
+                    "Content-Type":   "application/json",
+                    "X-Restli-Protocol-Version": "2.0.0",
+                },
+                json=body,
+                timeout=15,
+            )
+            if resp.ok or resp.status_code == 201:
+                post_id = resp.headers.get("x-restli-id", "unknown")
+                log.info(f"Posted successfully. Post ID: {post_id}")
+                return True
+            elif resp.status_code == 422 and asset_urn:
+                # Asset not ready yet — wait and retry
+                log.warning(f"Asset not ready (422) — waiting 5s before retry {attempt}/3...")
+                time.sleep(5)
+            elif resp.status_code == 429:
+                retry_after = int(resp.headers.get("retry-after", 60))
+                log.warning(f"Rate limited (429) — waiting {retry_after}s...")
+                time.sleep(retry_after)
+            elif resp.status_code == 401:
+                log.error("LinkedIn token expired or invalid. Run python3 auth.py.")
+                return False
+            elif resp.status_code >= 500:
+                log.warning(f"LinkedIn 5xx on attempt {attempt}/3 — retrying...")
+                time.sleep(5 * attempt)
+            else:
+                log.error(f"Post failed: {resp.status_code} {resp.text}")
+                return False
+        except requests.exceptions.Timeout:
+            log.warning(f"Post request timed out on attempt {attempt}/3 — retrying...")
+            time.sleep(5 * attempt)
+        except Exception as e:
+            log.error(f"Post request error: {e}")
+            return False
+    log.error("All post attempts failed.")
+    return False
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
