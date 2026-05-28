@@ -3,9 +3,9 @@
 Automatically posts tech news to LinkedIn twice daily (8:00 AM + 1:00 PM IST) with real article images scraped from the source.
 
 ## Stack
-- **News**: RSS feeds — Ars Technica, The Verge, TechCrunch, Wired, MIT Tech Review
+- **News**: Really Simple Syndication(RSS) feeds — Ars Technica, The Verge, TechCrunch, Wired, MIT Tech Review
 - **Post copy**: Local LLM via Ollama (`llama3.1:8b`) — 2-paragraph format, no emojis
-- **Images**: OG images scraped directly from article URLs (no AI generation)
+- **Images**: Images scraped directly from article URLs 
 - **Scheduler**: macOS cron
 
 ## Prerequisites
