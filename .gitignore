@@ -1,0 +1,6 @@
+.env
+.tokens.json
+.posted_urls.json
+logs/
+__pycache__/
+*.pyc
