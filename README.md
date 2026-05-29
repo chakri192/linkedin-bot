@@ -135,14 +135,27 @@ crontab -l | grep -v "linkedin-bot" | crontab -
 
 ## Scheduling — launchd (recommended over cron)
 
-cron does not fire when the Mac lid is closed. Use launchd instead — it fires missed jobs as soon as the Mac wakes up.
+cron does not fire when the Mac lid is closed. launchd fires missed jobs as soon as the Mac wakes up.
 
-### Install launchd agents
+A single launchd agent runs `scheduler.py` every 5 minutes. Each day at midnight, 3 random post times are picked across three windows:
+
+| Window | Range |
+|---|---|
+| Morning | 08:00 – 08:55 |
+| Afternoon | 12:00 – 12:55 |
+| Evening | 18:00 – 18:55 |
+
+### Install
 ```zsh
 chmod +x setup_launchd.sh && ./setup_launchd.sh
 ```
 
-### Verify
+### Preview today's schedule
+```zsh
+python3 scheduler.py
+```
+
+### Verify agents are loaded
 ```zsh
 launchctl list | grep linkedinbot
 ```
@@ -152,9 +165,8 @@ launchctl list | grep linkedinbot
 tail -f logs/launchd.log
 ```
 
-### Remove launchd agents
+### Remove agents
 ```zsh
-launchctl unload ~/Library/LaunchAgents/com.linkedinbot.morning.plist
-launchctl unload ~/Library/LaunchAgents/com.linkedinbot.afternoon.plist
+launchctl unload ~/Library/LaunchAgents/com.linkedinbot.scheduler.plist
 launchctl unload ~/Library/LaunchAgents/com.linkedinbot.tokencheck.plist
 ```
