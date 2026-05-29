@@ -4,5 +4,4 @@
 logs/
 __pycache__/
 *.pyc
-
- 
+.schedule.json
