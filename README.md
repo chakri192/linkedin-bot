@@ -1,12 +1,12 @@
 # LinkedIn Tech News Bot
 
-Automatically posts tech news to LinkedIn twice daily (8:00 AM + 1:00 PM IST) with real article images scraped from the source.
+Automatically posts tech news to LinkedIn once daily at a randomised time between 08:00–08:55 IST, with real article images scraped from the source.
 
 ## Stack
 - **News**: RSS feeds — Ars Technica, The Verge, TechCrunch, Wired, MIT Tech Review
 - **Post copy**: Local LLM via Ollama (`llama3.1:8b`) — 2-paragraph format, no emojis
 - **Images**: OG images scraped directly from article URLs with fallback text card generation
-- **Scheduler**: macOS cron
+- **Scheduler**: macOS launchd — fires on wake, randomised daily between 08:00–08:55 IST
 
 ## Prerequisites
 - [Ollama](https://ollama.com) installed and running
