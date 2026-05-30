@@ -88,10 +88,7 @@ done
 
 echo ""
 echo "Done. Scheduler runs every 5 minutes."
-echo "Today's post times will be randomised across:"
-echo "  Morning:   08:00 – 08:55"
-echo "  Afternoon: 12:00 – 12:55"
-echo "  Evening:   18:00 – 18:55"
+echo "Post time is randomised daily between 08:00 – 08:55"
 echo ""
 echo "Verify:  launchctl list | grep linkedinbot"
 echo "Preview: python3 scheduler.py"

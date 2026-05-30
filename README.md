@@ -137,13 +137,11 @@ crontab -l | grep -v "linkedin-bot" | crontab -
 
 cron does not fire when the Mac lid is closed. launchd fires missed jobs as soon as the Mac wakes up.
 
-A single launchd agent runs `scheduler.py` every 5 minutes. Each day at midnight, 3 random post times are picked across three windows:
+A single launchd agent runs `scheduler.py` every 5 minutes. Each day, one random post time is picked within the morning window:
 
 | Window | Range |
 |---|---|
 | Morning | 08:00 – 08:55 |
-| Afternoon | 12:00 – 12:55 |
-| Evening | 18:00 – 18:55 |
 
 ### Install
 ```zsh

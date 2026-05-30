@@ -20,8 +20,6 @@ PYTHON        = sys.executable
 
 WINDOWS = [
     ("morning",   8,  0,  8, 55),
-    ("afternoon", 12, 0, 12, 55),
-    ("evening",   18, 0, 18, 55),
 ]
 
 
