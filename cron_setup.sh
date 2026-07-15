@@ -8,8 +8,6 @@ LOG_DIR="$BOT_DIR/logs"
 mkdir -p "$LOG_DIR"
 
 # IST = UTC+5:30
-# 08:00 IST = 02:30 UTC
-# 13:00 IST = 07:30 UTC
 
 CRON_MORNING="30 2 * * * cd $BOT_DIR && $PYTHON $BOT_DIR/post.py >> $LOG_DIR/cron.log 2>&1"
 CRON_AFTERNOON="30 7 * * * cd $BOT_DIR && $PYTHON $BOT_DIR/post.py >> $LOG_DIR/cron.log 2>&1"
