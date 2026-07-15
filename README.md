@@ -109,7 +109,7 @@ LinkedIn access tokens last ~60 days. `check_token.py` runs daily at 8 AM and se
 
 | Days remaining | Severity | Action |
 |---|---|---|
-| 7 days | [WARNING] | Run `python3 auth.py` soon |
+| 7 days | [WARNING] | Run `python3 auth.py` quick |
 | 1 day | [CRITICAL] | Run `python3 auth.py` today |
 | 0 days | [EXPIRED] | Posts are failing — run immediately |
 
