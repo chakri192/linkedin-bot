@@ -5,3 +5,6 @@ logs/
 __pycache__/
 *.pyc
 .schedule.json
+
+# macOS
+.DS_Store
