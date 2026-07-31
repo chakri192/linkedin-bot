@@ -20,6 +20,7 @@ SCOPES        = "openid profile email w_member_social"
 TOKENS_FILE   = Path(".tokens.json")
 
 auth_code = None
+expected_state = None  # set in main(); validated on callback to block CSRF
 
 class CallbackHandler(BaseHTTPRequestHandler):
     def log_message(self, *args): pass  # silence access logs
@@ -28,6 +29,14 @@ class CallbackHandler(BaseHTTPRequestHandler):
         global auth_code
         parsed = urllib.parse.urlparse(self.path)
         params = urllib.parse.parse_qs(parsed.query)
+        # Verify the state parameter round-tripped unchanged — without this
+        # an attacker could feed us a code from a different auth request (CSRF).
+        returned_state = params.get("state", [None])[0]
+        if returned_state != expected_state:
+            self.send_response(400)
+            self.end_headers()
+            self.wfile.write(b"<h2>Error: state mismatch (possible CSRF). Aborting.</h2>")
+            return
         if "code" in params:
             auth_code = params["code"][0]
             self.send_response(200)
@@ -65,7 +74,9 @@ def get_profile(access_token: str) -> dict:
 
 
 def main():
+    global expected_state
     state = secrets.token_urlsafe(16)
+    expected_state = state
     auth_url = (
         "https://www.linkedin.com/oauth/v2/authorization?"
         + urllib.parse.urlencode({
@@ -96,6 +107,7 @@ def main():
     tokens["name"] = profile.get("name", "")
 
     TOKENS_FILE.write_text(json.dumps(tokens, indent=2))
+    os.chmod(TOKENS_FILE, 0o600)  # tokens are secrets: owner read/write only
     print(f"\n✓ Tokens saved to {TOKENS_FILE}")
     print(f"  Authenticated as: {tokens['name']} (sub: {tokens['sub']})")
     print(f"  Access token expires in: {tokens.get('expires_in', '?')} seconds (~60 days)")
