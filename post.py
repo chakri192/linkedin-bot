@@ -99,21 +99,26 @@ def refresh_access_token(tokens: dict) -> dict:
 
 # ── Duplicate tracking ────────────────────────────────────────────────────────
 
-def load_posted() -> set:
+def load_posted() -> list:
+    # Ordered (insertion order) so "keep the last N" actually keeps the most
+    # recent N. A set would make trimming discard arbitrary URLs and could
+    # let a recently-posted article be re-posted once the count exceeds 200.
     if POSTED_FILE.exists():
         try:
-            return set(json.loads(POSTED_FILE.read_text()))
+            return list(dict.fromkeys(json.loads(POSTED_FILE.read_text())))
         except (json.JSONDecodeError, ValueError):
             log.warning(".posted_urls.json is corrupted — resetting.")
             POSTED_FILE.write_text("[]")
-    return set()
+    return []
 
 
 def mark_posted(url: str):
     posted = load_posted()
-    posted.add(url)
-    # Keep last 200 only
-    trimmed = list(posted)[-200:]
+    if url in posted:
+        posted.remove(url)  # move to the end as most-recent
+    posted.append(url)
+    # Keep the most recent 200.
+    trimmed = posted[-200:]
     POSTED_FILE.write_text(json.dumps(trimmed, indent=2))
 
 # ── RSS fetching ──────────────────────────────────────────────────────────────
