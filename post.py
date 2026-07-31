@@ -8,8 +8,9 @@ LinkedIn Tech News Bot
 - Tracks posted URLs to avoid duplicates
 """
 
-import os, json, sys, time, logging, hashlib, mimetypes
+import os, json, sys, time, logging, hashlib, mimetypes, socket, ipaddress
 from pathlib import Path
+from urllib.parse import urlparse
 from datetime import datetime
 import requests
 import feedparser
@@ -215,6 +216,26 @@ def make_fallback_image(title: str) -> tuple:
         return None
 
 
+def _is_public_url(url: str) -> bool:
+    """Reject URLs that resolve to private/loopback/link-local addresses.
+
+    The OG-image URL is taken from arbitrary article HTML, so without this a
+    crafted page could point us at an internal service (SSRF)."""
+    host = urlparse(url).hostname
+    if not host:
+        return False
+    try:
+        infos = socket.getaddrinfo(host, None)
+    except OSError:
+        return False
+    for info in infos:
+        ip = ipaddress.ip_address(info[4][0])
+        if (ip.is_private or ip.is_loopback or ip.is_link_local
+                or ip.is_reserved or ip.is_multicast or ip.is_unspecified):
+            return False
+    return True
+
+
 def scrape_og_image(url: str, title: str = "") -> tuple:
     ALLOWED_TYPES = {"image/jpeg", "image/png", "image/gif"}
     MAX_SIZE_BYTES = 4 * 1024 * 1024  # 4MB — safe under LinkedIn's 5MB limit
@@ -253,6 +274,11 @@ def scrape_og_image(url: str, title: str = "") -> tuple:
                 from urllib.parse import urlparse
                 base = urlparse(url)
                 img_url = f"{base.scheme}://{base.netloc}{img_url}"
+
+            # SSRF guard: only fetch images from public hosts.
+            if not _is_public_url(img_url):
+                log.warning(f"Skipping non-public image host: {img_url[:60]}")
+                continue
 
             # Download image with redirect following
             img_r = requests.get(img_url, headers=headers, timeout=15, allow_redirects=True)
@@ -300,7 +326,7 @@ def scrape_og_image(url: str, title: str = "") -> tuple:
     log.warning("All scrape attempts failed — generating fallback image card.")
     return make_fallback_image(title) or None
 
-# ── Gemini post generator ─────────────────────────────────────────────────────
+# ── Post generator (local Ollama) ─────────────────────────────────────────────
 
 def generate_post(article: dict) -> str:
     prompt = f"""You are writing a LinkedIn post for a tech professional audience.
