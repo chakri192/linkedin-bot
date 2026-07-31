@@ -91,6 +91,7 @@ def refresh_access_token(tokens: dict) -> dict:
     if resp.ok:
         new_tokens = {**tokens, **resp.json()}
         TOKENS_FILE.write_text(json.dumps(new_tokens, indent=2))
+        os.chmod(TOKENS_FILE, 0o600)  # tokens are secrets: owner read/write only
         log.info("Access token refreshed successfully.")
         return new_tokens
     else:
