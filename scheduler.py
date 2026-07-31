@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """
 Scheduler — runs every 5 minutes via launchd.
-Decides if it's time to post based on 3 randomised daily windows:
-  - Morning:   08:00 – 08:55
-  - Afternoon: 12:00 – 12:55
-  - Evening:   18:00 – 18:55
+Decides if it's time to post based on the randomised daily windows defined in
+WINDOWS below (currently a single morning window; add more tuples to enable
+afternoon/evening posts).
 
 Each day, a random minute is picked within each window.
 The chosen times are stored in .schedule.json and regenerated at midnight.
