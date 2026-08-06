@@ -64,33 +64,29 @@ This registers two agents: the scheduler at five-minute intervals, and a daily t
 
 ## Scheduling
 
-`launchd` cannot express "at a random time within a window", so the randomisation is implemented one level above it.
+`launchd` cannot express "at a random time within a window", so the randomisation lives one level above it.
 
-The scheduler executes every five minutes and takes no action until the current time passes a target minute. That target is selected once per day, at random, within the configured window, and stored in `.schedule.json` alongside the date. When the stored date no longer matches the current date, a new time is generated.
+The scheduler runs every five minutes and does nothing until the clock passes a target minute, selected once per day at random and stored in `.schedule.json` alongside the date. A stale date triggers a new selection.
 
-Once a slot has fired successfully it is marked as posted, so subsequent runs that day are no-ops. If `post.py` exits non-zero the slot remains unposted but is not retried, because the failure conditions in this system — an expired token, an unavailable model — persist, and retrying would only multiply the failure notifications.
+A slot that fires successfully is marked posted, making the day's remaining runs no-ops. A non-zero exit leaves the slot unposted but is deliberately not retried: the failure conditions here — expired token, unavailable model — persist, so retrying would only multiply the notifications.
 
 ## Publishing pipeline
 
-**Retrieval and ranking.** Five feeds are polled: Ars Technica, The Verge, TechCrunch, Wired, and MIT Technology Review. Each entry is scored by how many of fifteen preferred topics appear in its title or summary. Entries whose URL appears in `.posted_urls.json` are excluded, so no article is published twice.
+**Retrieval and ranking.** Five feeds — Ars Technica, The Verge, TechCrunch, Wired, MIT Technology Review. Entries are scored on how many of fifteen preferred topics appear in the title or summary, and anything already in `.posted_urls.json` is excluded.
 
-**Generation.** The prompt specifies a fixed structure: one paragraph on the technical substance, one on the broader implication ending in a question, then hashtags and the source link. Emoji, first-person voice, and promotional openers are explicitly prohibited. Three attempts are made with a 90-second timeout; if Ollama is unavailable this is reported rather than worked around.
+**Generation.** The prompt fixes the structure: technical substance, then broader implication ending in a question, then hashtags and the source. Emoji, first-person voice, and promotional openers are prohibited. Three attempts, 90-second timeout.
 
-**Image acquisition.** The article page is retrieved and `og:image`, `twitter:image`, and `og:image:secure_url` are examined in that order. If no usable image is found, a text card is generated with Pillow and publication proceeds. A missing image never blocks a post.
+**Image acquisition.** `og:image`, `twitter:image`, and `og:image:secure_url` are examined in order. Failing all three, a text card is generated with Pillow; a missing image never blocks publication.
 
-**Upload and publication.** LinkedIn requires the asset to be registered, the bytes uploaded to the returned URL, and then a UGC post created referencing the asset. On success the article URL is appended to `.posted_urls.json`.
+**Upload and publication.** The asset is registered, the bytes uploaded to the returned URL, and a UGC post created referencing it. The article URL is then appended to `.posted_urls.json`.
 
 ### Server-side request forgery protection
 
-The Open Graph image URL originates in arbitrary third-party HTML. Without validation, a crafted article page could direct the bot at an internal service or a host on the local network, which it would then retrieve.
-
-Every candidate URL is resolved to an IP address and rejected if it falls in a private, loopback, link-local, reserved, multicast, or unspecified range. Content types are restricted to JPEG, PNG, and GIF.
+The Open Graph URL comes from arbitrary third-party HTML, so a crafted page could direct the bot at an internal service or a host on the local network. Every candidate is resolved to an IP and rejected if private, loopback, link-local, reserved, multicast, or unspecified. Content types are limited to JPEG, PNG, and GIF.
 
 ## Maintenance
 
-LinkedIn access tokens are valid for approximately 60 days, and re-authorisation is unavoidable on expiry.
-
-`check_token.py` runs daily at 08:05 and reads the remaining validity from `.tokens.json`. It raises a macOS notification at seven days, escalates at one day, and reports that publication is already failing once expired. Re-authorisation is `python3 auth.py`.
+LinkedIn access tokens last roughly 60 days, and re-authorisation on expiry is unavoidable. `check_token.py` runs daily at 08:05 and raises a macOS notification at seven days, escalating at one day and once expired. Re-authorise with `python3 auth.py`.
 
 ```sh
 launchctl list | grep linkedinbot     # confirm both agents are loaded
