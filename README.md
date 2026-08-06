@@ -101,3 +101,10 @@ Untracked by design: `.env`, `.tokens.json`, `.posted_urls.json`, `.schedule.jso
 | What counts as interesting | `PREFERRED_TOPICS` |
 | Tone, length, structure | the prompt in `generate_post()` |
 | Posting window, or adding more | `WINDOWS` in `scheduler.py` — a second tuple gives you a second post |
+
+## Contributors
+
+| | |
+|---|---|
+| [chakri192](https://github.com/chakri192) | Author |
+| [aider](https://github.com/Aider-AI/aider) | AI pair programmer |
