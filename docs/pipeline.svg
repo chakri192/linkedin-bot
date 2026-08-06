@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="480" viewBox="0 0 880 480" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif">
+  <defs>
+    <marker id="a" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto"><path d="M0,0 L7.5,3 L0,6 z" fill="#6b7688"/></marker>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto"><path d="M0,0 L7.5,3 L0,6 z" fill="#f2707c"/></marker>
+    <marker id="ag" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto"><path d="M0,0 L7.5,3 L0,6 z" fill="#7ddc8b"/></marker>
+  </defs>
+
+  <rect width="880" height="480" rx="10" fill="#0b0d11"/>
+  <rect x="0.5" y="0.5" width="879" height="479" rx="10" fill="none" stroke="#2b313d"/>
+
+  <text x="28" y="38" font-size="13" font-weight="700" fill="#8a9bb4" letter-spacing="1.3">A DIFFERENT MINUTE EVERY MORNING</text>
+
+  <!-- ── schedule band ── -->
+  <text x="28" y="66" font-size="10" fill="#8a9bb4">launchd wakes the scheduler every 5 minutes. The scheduler does nothing until the clock passes a minute it picked at random, once, at midnight.</text>
+
+  <!-- launchd ticks -->
+  <g fill="#5d6675">
+    <text x="28" y="96" font-size="9" font-family="SFMono-Regular,Menlo,monospace">launchd</text>
+  </g>
+  <g fill="#39414f">
+    <circle cx="120" cy="92" r="2.5"/><circle cx="180" cy="92" r="2.5"/><circle cx="240" cy="92" r="2.5"/>
+    <circle cx="300" cy="92" r="2.5"/><circle cx="360" cy="92" r="2.5"/><circle cx="420" cy="92" r="2.5"/>
+    <circle cx="480" cy="92" r="2.5"/><circle cx="540" cy="92" r="2.5"/><circle cx="600" cy="92" r="2.5"/>
+    <circle cx="660" cy="92" r="2.5"/><circle cx="720" cy="92" r="2.5"/><circle cx="780" cy="92" r="2.5"/>
+  </g>
+
+  <!-- window -->
+  <rect x="240" y="112" width="420" height="26" rx="5" fill="#5fd0de" fill-opacity="0.10" stroke="#5fd0de" stroke-width="1.1" stroke-dasharray="5 3"/>
+  <text x="450" y="129" font-size="10" fill="#5fd0de" text-anchor="middle">the window — 08:00 to 08:55</text>
+
+  <line x1="120" y1="152" x2="800" y2="152" stroke="#39414f" stroke-width="1.5"/>
+  <text x="120" y="170" font-size="9" fill="#5d6675">07:00</text>
+  <text x="800" y="170" font-size="9" fill="#5d6675" text-anchor="end">10:00</text>
+
+  <circle cx="470" cy="152" r="5.5" fill="#7ddc8b"/>
+  <line x1="470" y1="146" x2="470" y2="112" stroke="#7ddc8b" stroke-width="1"/>
+  <text x="470" y="186" font-size="10" font-weight="700" fill="#7ddc8b" text-anchor="middle">08:46 today · 08:12 tomorrow</text>
+
+  <text x="686" y="129" font-size="9" fill="#7d8899">one post per day, and the</text>
+  <text x="686" y="141" font-size="9" fill="#7d8899">slot is marked done</text>
+
+  <!-- ── pipeline ── -->
+  <line x1="28" y1="206" x2="852" y2="206" stroke="#2b313d"/>
+  <text x="28" y="232" font-size="12" font-weight="700" fill="#8a9bb4" letter-spacing="1.1">WHAT HAPPENS WHEN IT FIRES</text>
+
+  <g>
+    <rect x="28" y="248" width="124" height="96" rx="8" fill="#12151b" stroke="#39414f" stroke-width="1.2"/>
+    <text x="90" y="270" font-size="10.5" font-weight="700" fill="#e6edf3" text-anchor="middle">fetch</text>
+    <text x="90" y="290" font-size="9" fill="#8a9bb4" text-anchor="middle">5 RSS feeds</text>
+    <text x="90" y="305" font-size="9" fill="#7d8899" text-anchor="middle">Ars · Verge</text>
+    <text x="90" y="318" font-size="9" fill="#7d8899" text-anchor="middle">TechCrunch · Wired</text>
+    <text x="90" y="331" font-size="9" fill="#7d8899" text-anchor="middle">MIT Tech Review</text>
+
+    <rect x="168" y="248" width="124" height="96" rx="8" fill="#12151b" stroke="#5fd0de" stroke-width="1.2"/>
+    <text x="230" y="270" font-size="10.5" font-weight="700" fill="#5fd0de" text-anchor="middle">rank</text>
+    <text x="230" y="290" font-size="9" fill="#8a9bb4" text-anchor="middle">score on 15 topics</text>
+    <text x="230" y="305" font-size="9" fill="#7d8899" text-anchor="middle">AI · chips · research</text>
+    <text x="230" y="322" font-size="9" fill="#f0b866" text-anchor="middle">skips anything</text>
+    <text x="230" y="334" font-size="9" fill="#f0b866" text-anchor="middle">already posted</text>
+
+    <rect x="308" y="248" width="124" height="96" rx="8" fill="#12151b" stroke="#a78bfa" stroke-width="1.2"/>
+    <text x="370" y="270" font-size="10.5" font-weight="700" fill="#a78bfa" text-anchor="middle">write</text>
+    <text x="370" y="290" font-size="9" fill="#8a9bb4" text-anchor="middle">llama3.1:8b, local</text>
+    <text x="370" y="305" font-size="9" fill="#7d8899" text-anchor="middle">two paragraphs</text>
+    <text x="370" y="318" font-size="9" fill="#7d8899" text-anchor="middle">no emoji, no hype</text>
+    <text x="370" y="331" font-size="9" fill="#7d8899" text-anchor="middle">3 attempts</text>
+
+    <rect x="448" y="248" width="124" height="96" rx="8" fill="#12151b" stroke="#f2707c" stroke-width="1.2"/>
+    <text x="510" y="270" font-size="10.5" font-weight="700" fill="#f2707c" text-anchor="middle">image</text>
+    <text x="510" y="290" font-size="9" fill="#8a9bb4" text-anchor="middle">scrape og:image</text>
+    <text x="510" y="305" font-size="9" fill="#7d8899" text-anchor="middle">from the article</text>
+    <text x="510" y="322" font-size="9" fill="#f2707c" text-anchor="middle">public IPs only</text>
+    <text x="510" y="334" font-size="9" fill="#f2707c" text-anchor="middle">3 types allowed</text>
+
+    <rect x="588" y="248" width="124" height="96" rx="8" fill="#12151b" stroke="#39414f" stroke-width="1.2"/>
+    <text x="650" y="270" font-size="10.5" font-weight="700" fill="#e6edf3" text-anchor="middle">upload</text>
+    <text x="650" y="290" font-size="9" fill="#8a9bb4" text-anchor="middle">register the asset</text>
+    <text x="650" y="305" font-size="9" fill="#7d8899" text-anchor="middle">with LinkedIn,</text>
+    <text x="650" y="318" font-size="9" fill="#7d8899" text-anchor="middle">then PUT the bytes</text>
+
+    <rect x="728" y="248" width="124" height="96" rx="8" fill="#12151b" stroke="#7ddc8b" stroke-width="1.2"/>
+    <text x="790" y="270" font-size="10.5" font-weight="700" fill="#7ddc8b" text-anchor="middle">post</text>
+    <text x="790" y="290" font-size="9" fill="#8a9bb4" text-anchor="middle">UGC post, public</text>
+    <text x="790" y="305" font-size="9" fill="#7d8899" text-anchor="middle">URL recorded so it</text>
+    <text x="790" y="318" font-size="9" fill="#7d8899" text-anchor="middle">never repeats</text>
+
+    <line x1="152" y1="296" x2="164" y2="296" stroke="#6b7688" stroke-width="1.4" marker-end="url(#a)"/>
+    <line x1="292" y1="296" x2="304" y2="296" stroke="#6b7688" stroke-width="1.4" marker-end="url(#a)"/>
+    <line x1="432" y1="296" x2="444" y2="296" stroke="#6b7688" stroke-width="1.4" marker-end="url(#a)"/>
+    <line x1="572" y1="296" x2="584" y2="296" stroke="#6b7688" stroke-width="1.4" marker-end="url(#a)"/>
+    <line x1="712" y1="296" x2="724" y2="296" stroke="#6b7688" stroke-width="1.4" marker-end="url(#a)"/>
+  </g>
+
+  <!-- fallback -->
+  <path d="M510 344 V 372 H 650 V 344" stroke="#f0b866" stroke-width="1.3" stroke-dasharray="4 3" fill="none" marker-end="url(#a)"/>
+  <text x="580" y="388" font-size="9.5" fill="#f0b866" text-anchor="middle">no usable image → a text card is generated instead, and the post still goes out</text>
+
+  <!-- footnotes -->
+  <line x1="28" y1="404" x2="852" y2="404" stroke="#2b313d"/>
+
+  <rect x="28" y="416" width="404" height="50" rx="7" fill="#0f1319" stroke="#4a3138" stroke-width="1.1"/>
+  <text x="42" y="434" font-size="9.5" font-weight="700" fill="#f2707c">why the image step is the risky one</text>
+  <text x="42" y="449" font-size="9" fill="#8a9bb4">the og:image URL comes out of a stranger's HTML. Every candidate is</text>
+  <text x="42" y="461" font-size="9" fill="#8a9bb4">resolved first and rejected if it points anywhere private — plain SSRF.</text>
+
+  <rect x="448" y="416" width="404" height="50" rx="7" fill="#0f1319" stroke="#39414f" stroke-width="1.1"/>
+  <text x="462" y="434" font-size="9.5" font-weight="700" fill="#e6edf3">nothing leaves the machine except the post</text>
+  <text x="462" y="449" font-size="9" fill="#8a9bb4">the model runs locally on Ollama. No article text, no draft, and no</text>
+  <text x="462" y="461" font-size="9" fill="#8a9bb4">API key is sent to a hosted LLM at any point.</text>
+</svg>
