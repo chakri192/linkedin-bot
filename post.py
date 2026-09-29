@@ -236,6 +236,25 @@ def _is_public_url(url: str) -> bool:
     return True
 
 
+def _get_public(url: str, headers: dict, timeout: int, max_redirects: int = 5):
+    """GET that re-applies the SSRF guard to every redirect hop.
+
+    requests' own redirect following would happily go from a public URL to
+    http://127.0.0.1/... ; here each Location is checked before it's fetched."""
+    from urllib.parse import urljoin
+    for _ in range(max_redirects + 1):
+        if not _is_public_url(url):
+            log.warning(f"Skipping non-public host: {url[:60]}")
+            return None
+        r = requests.get(url, headers=headers, timeout=timeout, allow_redirects=False)
+        if r.is_redirect or r.is_permanent_redirect:
+            url = urljoin(url, r.headers.get("location", ""))
+            continue
+        return r
+    log.warning(f"Too many redirects: {url[:60]}")
+    return None
+
+
 def scrape_og_image(url: str, title: str = "") -> tuple:
     ALLOWED_TYPES = {"image/jpeg", "image/png", "image/gif"}
     MAX_SIZE_BYTES = 4 * 1024 * 1024  # 4MB — safe under LinkedIn's 5MB limit
@@ -275,13 +294,10 @@ def scrape_og_image(url: str, title: str = "") -> tuple:
                 base = urlparse(url)
                 img_url = f"{base.scheme}://{base.netloc}{img_url}"
 
-            # SSRF guard: only fetch images from public hosts.
-            if not _is_public_url(img_url):
-                log.warning(f"Skipping non-public image host: {img_url[:60]}")
+            # Download the image, re-checking every redirect against the SSRF guard.
+            img_r = _get_public(img_url, headers, timeout=15)
+            if img_r is None:
                 continue
-
-            # Download image with redirect following
-            img_r = requests.get(img_url, headers=headers, timeout=15, allow_redirects=True)
             if not img_r.ok:
                 log.warning(f"Image download failed: {img_r.status_code} {img_url[:60]}")
                 continue
@@ -509,13 +525,9 @@ def post_to_linkedin(access_token: str, author_urn: str, text: str, asset_urn = 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
+    dry_run = "--dry-run" in sys.argv[1:]
     log.info("=" * 60)
     log.info(f"LinkedIn News Bot — {datetime.now():%Y-%m-%d %H:%M:%S IST}")
-
-    tokens      = load_tokens()
-    tokens      = refresh_access_token(tokens)
-    access_token = tokens["access_token"]
-    author_sub   = tokens["sub"]  # OpenID sub = LinkedIn member ID
 
     posted_urls = load_posted()
     article     = fetch_best_article(posted_urls)
@@ -526,6 +538,16 @@ def main():
     print("\n── Generated Post Preview ──────────────────────────────")
     print(post_text)
     print("────────────────────────────────────────────────────────\n")
+
+    if dry_run:
+        og_result = scrape_og_image(article["url"], article["title"])
+        log.info(f"Dry run: nothing published. Image: {'found' if og_result else 'none'}.")
+        return
+
+    tokens       = load_tokens()
+    tokens       = refresh_access_token(tokens)
+    access_token = tokens["access_token"]
+    author_sub   = tokens["sub"]  # OpenID sub = LinkedIn member ID
 
     # Try to get OG image
     asset_urn = None

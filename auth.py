@@ -16,7 +16,7 @@ load_dotenv()
 CLIENT_ID     = os.environ["LINKEDIN_CLIENT_ID"]
 CLIENT_SECRET = os.environ["LINKEDIN_CLIENT_SECRET"]
 REDIRECT_URI  = "http://localhost:8080/callback"
-SCOPES        = "openid profile email w_member_social"
+SCOPES        = "openid profile w_member_social"
 TOKENS_FILE   = Path(".tokens.json")
 
 auth_code = None

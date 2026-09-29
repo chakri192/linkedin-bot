@@ -21,6 +21,11 @@ WINDOWS = [
     ("morning",   8,  0,  8, 55),
 ]
 
+# If the Mac was asleep at the chosen time, still post on wake -- but only up to
+# this many hours after the window ends, so a missed morning post doesn't go
+# out in the middle of the night.
+MAX_LATE_HOURS = 3
+
 
 def generate_schedule() -> dict:
     today = str(date.today())
@@ -60,10 +65,14 @@ def main():
     data  = load_schedule()
     slots = data["slots"]
 
+    ends = {name: h_end * 60 + m_end for name, _, _, h_end, m_end in WINDOWS}
+    now_mins = now.hour * 60 + now.minute
     for name, slot in slots.items():
         if slot["posted"]:
             continue
-        if now.hour == slot["hour"] and now.minute >= slot["minute"]:
+        due = slot["hour"] * 60 + slot["minute"]
+        latest = ends.get(name, due) + MAX_LATE_HOURS * 60
+        if due <= now_mins <= latest:
             print(f"[{now:%H:%M}] Firing {name} post (scheduled {slot['hour']:02d}:{slot['minute']:02d})")
             result = subprocess.run(
                 [PYTHON, str(BOT_DIR / "post.py")],
